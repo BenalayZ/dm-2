@@ -14,7 +14,7 @@ gem 'pg', '>= 0.18', '< 2.0'
 # Use Puma as the app server
 gem 'puma', '~> 4.3'
 gem 'foreman'
-
+gem 'postmark-rails'
 gem 'devise', '~> 4.7.1'
 
 # needed for nokogiri
