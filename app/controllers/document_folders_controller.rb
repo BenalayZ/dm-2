@@ -74,7 +74,10 @@ class DocumentFoldersController < ApplicationController
   # PATCH/PUT /document_folders/1/move
   def move
     p = document_folder_move_params
-    @document_folder.move_to(p[:position],p[:destination_id])
+    # if destination id is nil, that means we are moving it into/within the project root
+    destination_id = p[:destination_id].nil? ? @document_folder.project_id : p[:destination_id]
+    destination_type =  p[:destination_id].nil? ? "Project" : "DocumentFolder"
+    @document_folder.move_to(p[:position], destination_id, destination_type)
   end
 
   # DELETE /document_folders/1
@@ -87,7 +90,17 @@ class DocumentFoldersController < ApplicationController
   private
     # Use callbacks to share common setup or constraints between actions.
     def set_document_folder
-      @document_folder = DocumentFolder.find(params[:id])
+      @document_folder = DocumentFolder.includes(
+        :documents,
+        :document_folders,
+        documents: [
+          :highlights,
+          :documents_links,
+          :locked_by,
+          { images_attachments: :blob, thumbnail_attachment: :blob }
+        ]
+      )
+      .find(params[:id])
       @project = @document_folder.project
     end
 

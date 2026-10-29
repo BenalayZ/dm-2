@@ -45,6 +45,7 @@ import HighlightColorSelect from './HighlightColorSelect';
 import AddImageLayer from './AddImageLayer';
 import TextField from 'material-ui/TextField';
 import deepEqual from 'deep-equal';
+import { v4 as uuidv4 } from 'uuid';
 
 // overlay these modules
 openSeaDragonFabricOverlay(OpenSeadragon, fabric);
@@ -145,6 +146,27 @@ class CanvasResource extends Component {
     const key = this.getInstanceKey();
     setCanvasHighlightColor(key, initialColor);
 
+    // Handle iOS bug with "canvas area exceeds the maximum limit": set { useCanvas: false } if on
+    // iOS and at least one of the tile sources is an image (i.e. not IIIF) 
+    const iOS = 
+      // userAgent detection (does not work on iPad)
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      // navigator.platform detection (soon to be deprecated)
+      [
+          "iPad Simulator",
+          "iPhone Simulator",
+          "iPod Simulator",
+          "iPad",
+          "iPhone",
+          "iPod",
+      ].includes(navigator.platform) ||
+      // iPad on iOS 13 detection
+      (navigator.userAgent.includes("Mac") &&
+          ("ontouchend" in document || navigator.maxTouchPoints > 0));
+    const containsImageFile = content &&
+      content.tileSources &&
+      content.tileSources.some((source) => source.type === "image");
+
     const viewer = this.osdViewer = OpenSeadragon({
       id: this.osdId,
       prefixUrl: '/images/',
@@ -158,6 +180,7 @@ class CanvasResource extends Component {
       showSequenceControl: false,
       preserveViewport: true,
       preserveImageSizeOnResize: true,
+      useCanvas: !(iOS && containsImageFile),
     });
     const hasLayers = this.hasLayers();
 
@@ -353,7 +376,7 @@ class CanvasResource extends Component {
     overlay.fabricCanvas().on('path:created', event => {
       if (event.path) {
         let path = event.path;
-        const highlightUid = `dm_canvas_highlight_${Date.now()}`;
+        const highlightUid = `dm_canvas_highlight_${uuidv4()}`;
         path._highlightUid = highlightUid;
         path.perPixelTargetFind = true;
         this.overlay.fabricCanvas().setActiveObject(path);
@@ -800,7 +823,7 @@ class CanvasResource extends Component {
     this.lineInProgress.perPixelTargetFind = true;
     this.lineInProgress.selectable = true;
     this.lockCanvasObject(this.lineInProgress, true);
-    const highlightUid = `dm_canvas_highlight_${Date.now()}`;
+    const highlightUid = `dm_canvas_highlight_${uuidv4()}`;
     this.lineInProgress['_highlightUid'] = highlightUid;
 
     this.props.setSaving({ doneSaving: false });
@@ -827,7 +850,7 @@ class CanvasResource extends Component {
   }
 
   addShape(fabricObject) {
-    const highlightUid = `dm_canvas_highlight_${Date.now()}`;
+    const highlightUid = `dm_canvas_highlight_${uuidv4()}`;
     const { highlightColors } = this.props;
     const instanceKey = this.getInstanceKey();
     fabricObject['_highlightUid'] = highlightUid;
